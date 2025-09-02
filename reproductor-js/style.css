@@ -1,0 +1,1678 @@
+:root {
+  --theme-color: #ff8800;
+  --font-family: "Poppins", sans-serif;
+  --controls-bg: rgba(0, 0, 0, 0.5);
+  --controls-bg-hover: rgba(0, 0, 0, 0.7);
+  --bottom-bar-height: 90px; /* Define as CSS variable */
+}
+
+/* --- Reseteo y Estilos Base --- */
+body,
+html {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000;
+  font-family: var(--font-family);
+  color: white;
+}
+
+/* --- Contenedor Principal --- */
+#player-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+}
+#video-aspect-ratio-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex; /* Use flex to center video/iframe inside */
+  justify-content: center;
+  align-items: center;
+  z-index: 1; /* Below controls */
+}
+
+#video-element,
+#iframe-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensure object-fit: cover is present */
+  border: none;
+  position: relative; /* Changed from absolute to relative within its new container */
+  z-index: 1; /* Ensure video/iframe is below controls */
+}
+
+/* Adjust iframe height when active to make space for bottom controls */
+#player-wrapper.iframe-active #iframe-element {
+  width: 100%; /* Occupy full width of video-aspect-ratio-container */
+  height: 100%; /* Occupy full height of video-aspect-ratio-container */
+  /* Remove centering and positioning properties as it should now fill the parent */
+  margin: 0;
+  position: relative; /* Keep relative for z-index context if needed, but no longer for positioning */
+  bottom: unset;
+}
+
+#poster-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #1a1a1a; /* Default dark background */
+  background-size: cover;
+  background-position: center;
+  z-index: 25; /* Above video, below controls */
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+#poster-bg.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- Superposiciones (Controles, Carga, etc.) --- */
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10; /* Base z-index for overlays */
+}
+
+/* Adjust controls overlay height and position when iframe is active */
+#player-wrapper.iframe-active #controls-overlay {
+  height: calc(100% - var(--bottom-bar-height)); /* Match iframe height */
+  bottom: var(--bottom-bar-height); /* Position above the bottom bar */
+  opacity: 1 !important; /* Ensure controls are always visible */
+  visibility: visible !important; /* Ensure controls are always visible */
+}
+
+/* --- Indicador de Carga --- */
+#loader {
+  display: flex;
+  flex-direction: column; /* Arrange spinner and text vertically */
+  justify-content: center;
+  align-items: center;
+  z-index: 60; /* Highest z-index for loader */
+  background-color: rgba(0, 0, 0, 0.7); /* Darker, more prominent background */
+  color: white; /* Ensure text is visible */
+  font-size: 1.2em;
+  gap: 15px; /* Space between spinner and text */
+}
+#loader .spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--theme-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Removed .loading-overlay, .loading-content, .loading-spinner as they are no longer needed */
+
+/* --- Diálogo de Reanudación --- */
+#resume-prompt {
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 50; /* Above popups and controls */
+}
+#resume-prompt p {
+  font-size: 1.5em;
+  text-align: center;
+  margin: 0 20px 30px 20px;
+}
+.prompt-buttons button {
+  font-family: var(--font-family);
+  font-size: 1em;
+  font-weight: 600;
+  padding: 15px 30px;
+  margin: 0 10px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+#resume-btn {
+  background-color: var(--theme-color);
+  color: white;
+}
+#restart-btn {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+#resume-btn:hover,
+#restart-btn:hover {
+  transform: scale(1.05);
+}
+
+/* --- Interfaz de Controles --- */
+#controls-overlay {
+  display: flex;
+  flex-direction: column;
+  /* Removed justify-content: space-between; as bottom-bar is no longer a child */
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(0, 0, 0, 0) 25%,
+    rgba(0, 0, 0, 0) 75%
+  );
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
+  pointer-events: none; /* Changed to none to allow interaction with underlying iframe */
+  z-index: 26; /* Ensure it's above video/iframe */
+  height: 100%; /* Occupy full height by default */
+  /* Removed bottom positioning */
+}
+#controls-overlay.hidden {
+  opacity: 0;
+}
+
+/* Barra Superior */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  pointer-events: auto; /* Allow interaction with top bar controls */
+}
+.top-bar .icon-btn {
+  font-size: 32px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+.episode-title {
+  flex-grow: 1;
+  text-align: left;
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-left: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Controles Centrales */
+.center-play-controls {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  pointer-events: auto; /* Allow interaction with center play controls */
+}
+.center-play-controls .icon-btn {
+  font-size: 42px;
+  background: var(--controls-bg);
+  border: none;
+  color: white;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+.center-play-controls .icon-btn:hover {
+  background-color: var(--controls-bg-hover);
+}
+#play-pause-btn {
+  font-size: 58px !important;
+  width: 90px;
+  height: 90px;
+}
+
+/* Barra Inferior */
+.bottom-bar {
+  position: absolute; /* Changed to absolute positioning */
+  bottom: 0; /* Stick to the bottom */
+  left: 0;
+  width: 100%;
+  /* height: var(--bottom-bar-height); /* Let height adjust automatically */
+  padding: 0px 10px 0px 10px; /* Reduced padding for compactness */
+  box-sizing: border-box; /* Include padding in height */
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.6) 0%,
+    rgba(0, 0, 0, 0) 100%
+  ); /* Gradient for the footer */
+  z-index: 27; /* Ensure it's above controls-overlay and video/iframe */
+  opacity: 1; /* Ensure it's always visible by default */
+  transition: opacity 0.3s ease-in-out; /* Add transition for fading */
+  pointer-events: auto; /* Ensure interactions are possible */
+}
+.bottom-bar.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Ensure bottom bar is always visible when iframe is active */
+#player-wrapper.iframe-active .bottom-bar {
+  opacity: 1 !important; /* Ensure bottom bar is always visible */
+  visibility: visible !important; /* Ensure bottom bar is always visible */
+  pointer-events: auto !important; /* Ensure interactions are possible */
+}
+.timeline-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+/* Hide timeline container when iframe is active */
+#player-wrapper.iframe-active .timeline-container {
+  display: none;
+}
+
+.time-display {
+  font-size: 0.9em;
+  color: white; /* Changed to white */
+}
+#timeline {
+  flex-grow: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px; /* Slightly thicker for better visibility */
+  background: linear-gradient(
+    to right,
+    var(--theme-color) var(--progress-value, 0%),
+    rgba(255, 255, 255, 0.3) var(--progress-value, 0%)
+  );
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+  transition: height 0.2s ease;
+}
+#timeline:hover {
+  height: 8px;
+}
+#timeline::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px; /* Slightly larger thumb */
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3); /* Glow effect */
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+#timeline::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  border: none; /* Remove default border */
+}
+#timeline::-ms-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  border: none; /* Remove default border */
+}
+#timeline::-webkit-slider-runnable-track {
+  background: transparent; /* Hide default track */
+}
+#timeline::-moz-range-track {
+  background: transparent; /* Hide default track */
+}
+#timeline::-ms-track {
+  background: transparent; /* Hide default track */
+  border-color: transparent; /* Remove border */
+  color: transparent; /* Remove default fill */
+}
+
+.bottom-controls {
+  display: flex;
+  justify-content: space-around; /* Distribute items evenly */
+  align-items: center; /* Align items vertically in the center */
+  flex-wrap: nowrap; /* Force all buttons onto a single line */
+  gap: 10px; /* Increased gap between buttons */
+  padding: 5px 0;
+  overflow-x: auto; /* Allow horizontal scrolling if buttons overflow */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+.bottom-controls .control-group {
+  display: flex;
+  flex-direction: row; /* Changed to row to place icon next to text */
+  align-items: center; /* Align items vertically in the center */
+  justify-content: center; /* Center content horizontally */
+  gap: 5px; /* Added gap between icon and text */
+  flex-shrink: 0; /* Prevent buttons from shrinking too much */
+  color: white;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0px 5px; /* Adjusted padding for compactness */
+  transition: transform 0.2s ease;
+  min-width: 90px; /* Increased minimum width for all control groups */
+}
+
+.bottom-controls .control-group .material-icons {
+  font-size: 24px; /* Increased icon size for better visibility */
+  margin-bottom: 0; /* Remove bottom margin as it's now horizontal */
+}
+.bottom-controls .control-group span {
+  font-size: 0.8em; /* Increased text size for better readability */
+  font-weight: 600;
+}
+
+.language-server-group {
+  display: flex;
+  flex-direction: row; /* Display children side-by-side */
+  align-items: center;
+  gap: 2px; /* Small gap between language and server selects */
+  /* flex-shrink: 0; is now inherited from .control-group */
+  /* padding and min-width are inherited from .control-group */
+}
+
+.select-wrapper {
+  position: relative; /* Enable absolute positioning for children */
+  display: inline-flex; /* Use inline-flex to keep it in line with other controls */
+  flex-direction: row; /* Arrange children horizontally */
+  align-items: center; /* Vertically align items */
+  justify-content: center; /* Center content horizontally */
+  gap: 2px; /* Reverted to a small gap for separation from language icon */
+  color: white;
+  cursor: pointer;
+  padding: 0px 5px; /* Adjusted padding for compactness */
+  min-width: 90px; /* Re-added min-width for consistent sizing */
+}
+
+.select-wrapper .material-icons:not(.dropdown-arrow) {
+  /* Target the language/dvr icon */
+  font-size: 24px; /* Consistent with other control groups */
+  margin-bottom: 0; /* Remove bottom margin as it's now horizontal */
+  margin-right: 5px; /* Add margin to separate icon from select */
+}
+
+.select-control {
+  -webkit-appearance: none; /* Remove default select styling */
+  -moz-appearance: none;
+  appearance: none;
+  background: none;
+  border: none;
+  color: white;
+  font-family: var(--font-family);
+  font-size: 0.6em; /* Consistent with other control group text */
+  font-weight: 600;
+  text-align: left; /* Reverted to left alignment */
+  padding: 0 20px 0 0px; /* Adjusted right padding for the arrow */
+  cursor: pointer;
+  outline: none;
+  max-width: none; /* Remove width limit */
+  line-height: 1; /* Ensure text fits well */
+}
+
+.dropdown-arrow {
+  position: absolute; /* Absolute positioning for precise placement */
+  right: 0px; /* Position at the very edge of the select's visual boundary */
+  top: 50%; /* Vertically center */
+  transform: translateY(-50%); /* Adjust for vertical centering */
+  font-size: 24px; /* Consistent icon size */
+  pointer-events: none; /* Allow clicks to pass through to the select */
+}
+
+/* Specific styles for the server selector's dropdown arrow */
+.bottom-controls .select-wrapper:nth-child(3) .dropdown-arrow {
+  right: -5px; /* Move slightly outside to create a small gap */
+}
+
+/* Specific styles for the server selector's select control */
+#servers-select {
+  padding-right: 30px; /* Ensure text doesn't overlap and create a small visual gap */
+}
+
+.select-control option {
+  background-color: #333;
+  color: white;
+}
+
+/* No specific media query for bottom-controls flex-wrap, as it's nowrap */
+/* Adjust top-bar icon size for smaller screens if needed */
+@media (max-width: 600px) {
+  .top-bar {
+    padding: 10px 15px; /* Reduced padding for top bar */
+  }
+  .top-bar .icon-btn {
+    font-size: 28px; /* Slightly smaller icons in top bar */
+  }
+  .episode-title {
+    font-size: 0.9em; /* Smaller title font */
+    margin-left: 10px; /* Reduced margin */
+  }
+
+  .center-play-controls {
+    gap: 20px; /* Reduced gap for center controls */
+  }
+  .center-play-controls .icon-btn {
+    width: 60px; /* Smaller buttons */
+    height: 60px;
+    font-size: 36px;
+  }
+  #play-pause-btn {
+    width: 80px; /* Smaller play/pause button */
+    height: 80px;
+    font-size: 50px !important;
+  }
+
+  /* Adjust footer height and related elements */
+  .bottom-bar {
+    height: 70px; /* Smaller footer height for medium screens */
+    padding: 5px 15px 10px 15px; /* Adjust padding */
+  }
+  #video-element,
+  #iframe-element,
+  #controls-overlay {
+    height: 100%; /* Occupy full height */
+  }
+  #controls-overlay {
+    /* Removed bottom positioning */
+  }
+
+  .popup {
+    bottom: 80px; /* Adjust popup position for smaller screens (70px footer + 10px margin) */
+    width: 80%; /* Make popups narrower */
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-bar {
+    padding: 8px 10px; /* Further reduced padding for top bar */
+  }
+  .top-bar .icon-btn {
+    font-size: 24px; /* Even smaller icons in top bar */
+  }
+  .episode-title {
+    font-size: 0.8em; /* Even smaller title font */
+    margin-left: 8px; /* Further reduced margin */
+  }
+
+  .center-play-controls {
+    gap: 15px; /* Further reduced gap for center controls */
+  }
+  .center-play-controls .icon-btn {
+    width: 50px; /* Even smaller buttons */
+    height: 50px;
+    font-size: 30px;
+  }
+  #play-pause-btn {
+    width: 70px; /* Even smaller play/pause button */
+    height: 70px;
+    font-size: 42px !important;
+  }
+
+  /* Adjust footer height and related elements */
+  .bottom-bar {
+    height: 60px; /* Even smaller footer height for very small screens */
+    padding: 5px 10px 5px 10px; /* Adjust padding */
+    --bottom-bar-height: 60px; /* Override for smaller screens */
+  }
+  #video-element,
+  #iframe-element,
+  #controls-overlay {
+    height: 100%; /* Occupy full height */
+  }
+  #controls-overlay {
+    /* Removed bottom positioning */
+  }
+
+  .bottom-controls {
+    /* Removed flex-wrap: wrap; to keep all buttons on one line */
+    justify-content: space-evenly; /* Distribute items evenly when wrapped */
+    gap: 10px; /* Increased gap between buttons */
+  }
+  .bottom-controls .control-group {
+    min-width: 60px; /* Increased minimum width for buttons */
+    padding: 0px 5px; /* Adjusted padding for better touch targets */
+    margin-top: 3px; /* Reduced top margin for wrapped rows */
+  }
+  .bottom-controls .control-group .material-icons {
+    font-size: 18px; /* Consistent icon size */
+  }
+  .bottom-controls .control-group span {
+    font-size: 0.6em; /* Consistent text size */
+  }
+
+  .select-wrapper {
+    min-width: 60px; /* Adjust min-width for select wrappers */
+    padding: 0px 5px; /* Adjust padding */
+  }
+
+  .select-wrapper .material-icons:not(.dropdown-arrow),
+  .select-wrapper .dropdown-arrow {
+    font-size: 18px; /* Adjust icon size for select wrappers */
+  }
+
+  .select-control {
+    font-size: 0.6em; /* Adjust font size for select controls */
+  }
+
+  .timeline-container {
+    gap: 10px; /* Reduce gap in timeline for compactness */
+  }
+  .time-display {
+    font-size: 0.8em; /* Smaller time display for compactness */
+  }
+
+  .popup {
+    bottom: 70px; /* Adjust popup position further for very small screens (60px footer + 10px margin) */
+    width: 90%; /* Make popups wider on very small screens to use available space */
+    max-width: 280px;
+  }
+}
+
+/* General adjustments for vertical orientation */
+@media (orientation: portrait) {
+  /* Removed body rotation to allow orientation prompt to display correctly */
+
+  #player-wrapper {
+    padding-bottom: 0; /* Remove any bottom padding that might interfere */
+  }
+
+  #video-aspect-ratio-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%; /* Take full width */
+    max-width: calc(
+      100vh * (16 / 9)
+    ); /* Limit width based on 16:9 aspect ratio of viewport height */
+    height: auto; /* Let height adjust based on aspect ratio */
+    aspect-ratio: 16 / 9; /* Set aspect ratio to 16:9 */
+    object-fit: contain; /* Ensure video fits within the container without cropping */
+  }
+
+  #poster-bg {
+    /* In portrait, poster should still cover the entire player area */
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    transform: none;
+    aspect-ratio: unset;
+    object-fit: unset;
+  }
+
+  #video-element,
+  #iframe-element {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Ensure video fits within the container without cropping */
+  }
+
+  .bottom-bar {
+    display: none !important; /* Ocultar el menú inferior en orientación vertical */
+  }
+
+  .vertical-menu-container {
+    /* Removed !important to allow default hidden state when not active */
+    opacity: 1; /* Mostrar el nuevo menú vertical en orientación vertical */
+    visibility: visible;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: auto; /* Ajustar altura según contenido */
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.6) 0%,
+      /* Consistent with bottom-bar */ rgba(0, 0, 0, 0) 100%
+    );
+    z-index: 27; /* Por encima de video/iframe, igual que bottom-bar */
+    padding: 10px 10px 0px 10px; /* Adjusted padding for consistency */
+    box-sizing: border-box;
+    flex-direction: column; /* Elementos apilados verticalmente */
+    align-items: center; /* Centrar elementos horizontalmente */
+    gap: 10px; /* Espacio entre elementos */
+    pointer-events: auto; /* Ensure interactions are possible */
+  }
+
+  .bottom-bar {
+    height: auto; /* Allow height to adjust based on content */
+    /* min-height: 80px; /* Remove min-height to allow full collapse if needed */
+    padding: 10px 15px 0px 15px; /* Adjust padding for portrait, remove bottom padding */
+    --bottom-bar-height: auto; /* Override for portrait mode, let it be auto */
+  }
+
+  .bottom-controls {
+    flex-direction: row; /* Ensure horizontal layout for controls */
+    flex-wrap: nowrap; /* Prevent wrapping to keep all buttons on one line */
+    justify-content: space-evenly; /* Distribute items evenly with space between */
+    gap: 15px; /* Increased gap for portrait to be more compact */
+  }
+
+  .bottom-controls .control-group {
+    min-width: 70px; /* Increased min-width to allow more buttons on one line */
+    padding: 5px 10px; /* Adjusted padding for compactness */
+  }
+
+  .bottom-controls .control-group .material-icons {
+    font-size: 20px; /* Consistent icon size */
+  }
+
+  .bottom-controls .control-group span {
+    font-size: 0.7em; /* Consistent text size */
+  }
+
+  .select-wrapper {
+    min-width: 70px; /* Adjust min-width for select wrappers in portrait */
+    padding: 5px 10px; /* Adjust padding */
+    flex-shrink: 1; /* Allow select wrappers to shrink */
+    gap: 5px; /* Reduced gap between icon, select, and dropdown arrow in portrait */
+  }
+
+  .select-wrapper .material-icons:not(.dropdown-arrow),
+  .select-wrapper .dropdown-arrow {
+    font-size: 18px; /* Adjust icon size for select wrappers in portrait */
+    flex-shrink: 0; /* Prevent icons from shrinking */
+  }
+
+  .select-control {
+    font-size: 0.6em; /* Adjust font size for select controls in portrait */
+    max-width: 100%; /* Allow text to shrink within its container */
+    flex-basis: 0; /* Allow flex item to shrink below its content size */
+    flex-grow: 1; /* Allow text to grow */
+    text-overflow: ellipsis; /* Add ellipsis for overflowing text */
+    white-space: nowrap; /* Prevent text from wrapping */
+    overflow: hidden; /* Hide overflowing text */
+  }
+
+  .popup {
+    bottom: 10vh; /* Position popups relative to viewport height */
+    width: 90%;
+    max-width: 350px; /* Allow popups to be a bit wider */
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .selection-list {
+    bottom: calc(
+      var(--bottom-bar-height) + 10px
+    ); /* Adjust position for mobile */
+    right: 5px; /* Adjust right alignment for smaller screens */
+    width: 95%; /* Make lists wider on mobile */
+    max-width: 350px; /* Allow lists to be a bit wider */
+  }
+
+  #resume-prompt p {
+    font-size: 1.2em; /* Smaller font for resume message */
+    margin: 0 15px 20px 15px;
+  }
+
+  .prompt-buttons button {
+    padding: 12px 25px; /* Smaller buttons for resume prompt */
+    font-size: 0.9em;
+  }
+
+  /* The general rules now include the 10px spacing, so this specific override is no longer needed here.
+     The --bottom-bar-height variable will correctly resolve to 80px in portrait mode. */
+}
+
+.bottom-controls .control-group:hover {
+  transform: translateY(-3px);
+}
+
+/* --- Control de Brillo Lateral (Vertical) --- */
+#brightness-control-container {
+  position: absolute;
+  left: 20px; /* Position on the left side */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column; /* Arrange icon and slider vertically */
+  align-items: center;
+  gap: 10px;
+  background-color: transparent; /* No background */
+  padding: 15px 8px; /* Adjust padding for vertical layout */
+  border-radius: 20px;
+  z-index: 28; /* Above bottom bar, below popups */
+  opacity: 0; /* Hidden by default */
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+#brightness-control-container.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+#brightness-control-container .material-icons {
+  font-size: 24px;
+  color: white;
+}
+
+#brightness-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 6px; /* Vertical width */
+  height: 120px; /* Vertical height */
+  background: linear-gradient(
+    to bottom,
+    /* Gradient from top to bottom for vertical slider */ var(--theme-color)
+      var(--brightness-value, 50%),
+    rgba(255, 255, 255, 0.3) var(--brightness-value, 50%)
+  );
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+}
+
+#brightness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3);
+}
+
+#brightness-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3);
+  border: none;
+}
+
+#brightness-slider::-ms-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3);
+  border: none;
+}
+
+/* Responsive adjustments for brightness control */
+@media (max-width: 600px) {
+  #brightness-control-container {
+    left: 15px;
+    padding: 12px 6px;
+    gap: 8px;
+  }
+  #brightness-control-container .material-icons {
+    font-size: 20px;
+  }
+  #brightness-slider {
+    width: 5px;
+    height: 90px;
+  }
+  #brightness-slider::-webkit-slider-thumb,
+  #brightness-slider::-moz-range-thumb,
+  #brightness-slider::-ms-thumb {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  #brightness-control-container {
+    left: 10px;
+    padding: 10px 5px;
+    gap: 5px;
+  }
+  #brightness-control-container .material-icons {
+    font-size: 18px;
+  }
+  #brightness-slider {
+    width: 4px;
+    height: 70px;
+  }
+  #brightness-slider::-webkit-slider-thumb,
+  #brightness-slider::-moz-range-thumb,
+  #brightness-slider::-ms-thumb {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* --- Popups (Episodios, Descarga, Reporte) --- */
+.popup {
+  position: fixed; /* Use fixed to center relative to viewport */
+  top: 50%; /* Center vertically */
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center horizontally and vertically */
+  background-color: var(--controls-bg);
+  backdrop-filter: blur(5px);
+  border-radius: 10px;
+  padding: 10px;
+  z-index: 30;
+  width: 90%; /* Make it adapt to width, slightly larger */
+  max-width: 450px; /* Increased max width for better content display */
+  max-height: 90vh; /* Limit height to 90% of viewport height */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5); /* Add a subtle shadow */
+  display: flex; /* Use flexbox for internal layout */
+  flex-direction: column; /* Stack header and content vertically */
+}
+
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.popup-header h3 {
+  margin: 0;
+  font-size: 1.1em;
+  flex-grow: 1;
+  text-align: center;
+}
+
+.popup-header .close-popup-btn {
+  background-color: rgba(255, 255, 255, 0.1); /* Subtle background */
+  border: none;
+  color: white;
+  font-size: 20px; /* Slightly smaller icon */
+  cursor: pointer;
+  padding: 8px; /* Increased padding */
+  width: 36px; /* Fixed width for a circular shape */
+  height: 36px; /* Fixed height for a circular shape */
+  border-radius: 50%; /* Make it circular */
+  display: flex; /* Use flexbox for centering icon */
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.popup-header .close-popup-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2); /* Darker on hover */
+  transform: scale(1.1); /* Slightly enlarge on hover */
+}
+
+.popup-content {
+  flex-grow: 1; /* Allow content to take available space */
+  overflow-y: auto; /* Enable scrolling for content */
+  padding-right: 5px; /* Space for scrollbar */
+}
+
+/* Report Popup Specific Styles */
+#report-popup .popup-content {
+  max-height: none; /* Remove max-height for report popup, now handled by parent .popup */
+  overflow-y: auto; /* Ensure scrolling is enabled for report popup content */
+  padding-right: 5px; /* Keep padding for scrollbar */
+}
+
+.popup-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.popup-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.popup-content::-webkit-scrollbar-thumb {
+  background: var(--theme-color);
+  border-radius: 10px;
+}
+
+/* --- Selection Lists (Idioma, Servidor) --- */
+.selection-list {
+  position: absolute;
+  bottom: var(--bottom-bar-height); /* Position above the bottom bar */
+  right: 10px; /* Align to the right */
+  left: auto; /* Remove left centering */
+  transform: none; /* Remove translateX centering */
+  background-color: var(--controls-bg);
+  backdrop-filter: blur(5px);
+  border-radius: 10px;
+  padding: 10px;
+  z-index: 40; /* Higher than popups to appear on top */
+  width: 90%;
+  max-width: 300px; /* Smaller max-width for lists */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.selection-list.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.selection-list .list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.selection-list .list-header h3 {
+  margin: 0;
+  font-size: 1.1em;
+  flex-grow: 1;
+  text-align: center;
+}
+
+.selection-list .list-header .close-list-btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.selection-list .list-header .close-list-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.selection-list .list-content {
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.selection-list .list-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.selection-list .list-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.selection-list .list-content::-webkit-scrollbar-thumb {
+  background: var(--theme-color);
+  border-radius: 10px;
+}
+
+.selection-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  margin-bottom: 5px;
+  background: none;
+  border: none;
+  color: white;
+  text-align: center;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 0.95em;
+  transition: background-color 0.2s ease;
+}
+
+.selection-option:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.selection-option.selected {
+  color: var(--theme-color);
+  font-weight: 600;
+  background-color: rgba(255, 136, 0, 0.1); /* Light background for selected */
+}
+
+.selection-option .flag-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Report Popup Specific Styles */
+#report-popup .popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#report-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 3px; /* Reduced margin for compactness */
+  font-size: 0.85em; /* Slightly smaller font */
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.form-group select,
+.form-group input[type="text"],
+.form-group textarea {
+  /* Added textarea for consistency */
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  padding: 8px; /* Reduced padding for compactness */
+  color: white;
+  font-family: var(--font-family);
+  font-size: 0.85em; /* Slightly smaller font */
+  outline: none;
+}
+
+.form-group select option {
+  background-color: #333; /* Darker background for options to ensure contrast */
+  color: white;
+}
+
+.form-group select:focus,
+.form-group input[type="text"]:focus {
+  border-color: var(--theme-color);
+  box-shadow: 0 0 0 2px rgba(255, 136, 0, 0.3);
+}
+
+.form-group input[type="checkbox"] {
+  margin-right: 10px;
+  /* Basic styling for checkbox */
+  width: 18px;
+  height: 18px;
+  accent-color: var(--theme-color); /* Colors the checkbox itself */
+}
+
+.form-group input[type="checkbox"] + label {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 0; /* Reset margin for checkbox label */
+}
+
+#send-report-btn {
+  background-color: var(--theme-color);
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 1em;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+  margin-top: 10px;
+}
+
+.report-type-options {
+  display: flex;
+  gap: 10px; /* Reduced gap for compactness */
+  margin-top: 5px;
+  justify-content: center; /* Center radio buttons */
+}
+
+.report-type-options input[type="radio"] {
+  display: none; /* Hide default radio button */
+}
+
+.report-type-options label {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-size: 0.9em;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0; /* Override form-group label margin */
+}
+
+.report-type-options input[type="radio"]:checked + label {
+  background-color: var(--theme-color);
+  color: white;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background-color: var(--theme-color);
+  color: white;
+  padding: 12px 20px; /* Reduced padding for compactness */
+  border: none;
+  border-radius: 8px; /* Slightly more rounded corners */
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 1em; /* Adjusted font size */
+  font-weight: 700; /* Bolder font weight */
+  letter-spacing: 0.5px; /* Added letter spacing */
+  text-transform: uppercase; /* Uppercase text */
+  transition: background-color 0.3s ease, transform 0.2s ease,
+    box-shadow 0.3s ease; /* Added transform and box-shadow to transition */
+  margin-top: 15px; /* Reduced top margin */
+  width: 100%;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); /* Added box shadow for depth */
+}
+
+.btn-primary:hover {
+  background-color: #e67e00; /* Slightly darker theme color */
+  transform: translateY(-2px); /* Lift button on hover */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); /* More pronounced shadow on hover */
+}
+
+/* Remove the old #send-report-btn styles as it's replaced by .btn-primary */
+#send-report-btn {
+  display: none;
+}
+
+/* --- Orientación de Pantalla Prompt --- */
+/* The orientation-prompt was removed from index.html, so these styles are no longer needed. */
+/* Keeping them commented out for now, but they can be fully removed if confirmed not needed. */
+/*
+#orientation-prompt {
+  background-color: rgba(0, 0, 0, 1);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  z-index: 100;
+  color: white;
+  pointer-events: auto;
+}
+*/
+
+/* New rule to completely hide the player when in portrait, allowing only the orientation message to be seen */
+#player-wrapper.blurred {
+  opacity: 0; /* Completely hide the player content */
+  visibility: hidden; /* Ensure it's not interactable and fully hidden */
+  pointer-events: none; /* Disable all interactions */
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out; /* Smooth transition */
+}
+
+/* --- Mensaje de Orientación --- */
+#orientation-message {
+  display: none; /* Hidden by default, controlled by JS */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent background */
+  color: white;
+  font-size: 1.5em;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999; /* Ensure it's on top of everything */
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.orientation-message {
+  display: flex; /* Always flex for internal content */
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  max-width: 80%;
+}
+
+.orientation-message .rotate-icon {
+  font-size: 80px;
+  color: var(--theme-color);
+  animation: rotate-device 2s infinite ease-in-out;
+}
+
+.orientation-message p {
+  font-size: 1.5em;
+  margin: 0;
+}
+
+@keyframes rotate-device {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(90deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* --- Estilos para Omitir Intro --- */
+.skip-intro-container {
+  position: absolute;
+  bottom: 100px; /* Position above the bottom bar */
+  right: 20px;
+  z-index: 50; /* Above controls, but below popups */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.skip-intro-container.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.skip-intro-button {
+  background-color: white; /* White background */
+  color: black; /* Black text */
+  border: none; /* No border */
+  padding: 10px 10px; /* Less tall (vertical) and same width (horizontal) */
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 1em;
+  font-weight: 600;
+  min-width: 100px; /* Adjusted min-width */
+  transition: background-color 0.2s ease, transform 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* Add a subtle shadow */
+}
+
+.skip-intro-button:hover {
+  background-color: #f0f0f0; /* Slightly darker white on hover */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); /* More pronounced shadow on hover */
+}
+
+/* Responsive adjustments for Skip Intro button */
+@media (max-width: 600px) {
+  .skip-intro-container {
+    bottom: 80px; /* Adjust for smaller screens, above the smaller bottom bar */
+    right: 15px;
+  }
+  .skip-intro-button {
+    padding: 8px 12px; /* Adjust padding for smaller screens */
+    font-size: 0.9em;
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .skip-intro-container {
+    bottom: 70px; /* Adjust for very small screens */
+    right: 10px;
+  }
+  .skip-intro-button {
+    padding: 6px 10px; /* Adjust padding for very small screens */
+    font-size: 0.8em;
+    min-width: 90px;
+  }
+}
+
+/* --- Estilos para "Continuar Viendo" --- */
+.continue-watching-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 70; /* Asegura que esté por encima de todo */
+  color: white;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.continue-watching-container.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Ensure continue watching modal is visible in fullscreen */
+#player-wrapper:fullscreen .continue-watching-container {
+  z-index: 2147483647; /* Max z-index to ensure it's always on top */
+}
+
+.continue-watching-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centrar los elementos hijos horizontalmente */
+  gap: 25px;
+  padding: 30px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 15px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  max-width: 90%;
+  width: 400px;
+  margin: auto; /* Centrar el contenido dentro del contenedor flex */
+  text-align: center; /* Asegurar que el texto esté centrado */
+}
+
+.continue-watching-content p {
+  font-size: 1.8em;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+  text-align: center; /* Asegurar que el texto esté centrado */
+}
+
+#continue-watching-button {
+  background-color: var(--theme-color);
+  color: white;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 1.2em;
+  font-weight: 700;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  margin: 0 auto; /* Centrar el botón horizontalmente */
+  display: block; /* Asegurar que el margen auto funcione */
+}
+
+#continue-watching-button:hover {
+  background-color: #e67e00;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive adjustments for "Continuar Viendo" */
+@media (max-width: 600px) {
+  .continue-watching-content {
+    padding: 25px;
+    gap: 20px;
+    width: 300px;
+  }
+  .continue-watching-content p {
+    font-size: 1.5em;
+  }
+  #continue-watching-button {
+    padding: 12px 25px;
+    font-size: 1em;
+  }
+}
+
+@media (max-width: 480px) {
+  .continue-watching-content {
+    padding: 20px;
+    gap: 15px;
+    width: 250px;
+  }
+  .continue-watching-content p {
+    font-size: 1.3em;
+  }
+  #continue-watching-button {
+    padding: 10px 20px;
+    font-size: 0.9em;
+  }
+}
+
+/* Ajustes para orientación horizontal (landscape) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .continue-watching-content {
+    flex-direction: row; /* Horizontal layout for content */
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    padding: 20px 40px;
+    max-width: 90%;
+    width: auto; /* Allow width to adjust */
+  }
+  .continue-watching-content p {
+    font-size: 1.4em;
+    white-space: nowrap; /* Prevent text wrapping */
+  }
+  #continue-watching-button {
+    padding: 12px 25px;
+    font-size: 1.1em;
+  }
+}
+
+/* --- Mensaje de Orientación --- */
+#orientation-message {
+  display: none; /* Hidden by default */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  font-size: 1.5em;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#orientation-message p {
+  margin-top: 20px;
+}
+
+/* --- Contenedor del Menú Vertical (Solo en Vertical) --- */
+.vertical-menu-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: auto; /* Ajustar altura según contenido */
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.6) 0%,
+    /* Consistent with bottom-bar */ rgba(0, 0, 0, 0) 100%
+  );
+  z-index: 27; /* Por encima de video/iframe, igual que bottom-bar */
+  padding: 10px 10px 0px 10px; /* Adjusted padding for consistency */
+  box-sizing: border-box;
+  flex-direction: column; /* Elementos apilados verticalmente */
+  align-items: center; /* Centrar elementos horizontalmente */
+  gap: 10px; /* Espacio entre elementos */
+  pointer-events: auto; /* Ensure interactions are possible */
+  opacity: 0; /* Hidden by default */
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.vertical-menu-container.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Explicitly hide vertical menu in landscape orientation */
+@media (orientation: landscape) {
+  .vertical-menu-container {
+    display: none !important;
+  }
+}
+
+.vertical-language-server-controls {
+  display: flex;
+  flex-direction: row; /* Arrange selects horizontally */
+  justify-content: space-around;
+  align-items: center;
+  width: 100%; /* Take full width of parent */
+  gap: 10px; /* Space between select wrappers */
+  padding: 5px 0;
+}
+
+.vertical-language-server-controls .select-wrapper {
+  flex-grow: 1; /* Allow select wrappers to grow and fill space */
+  min-width: unset; /* Remove min-width constraint for better flexibility */
+  padding: 0px 5px; /* Adjust padding */
+}
+
+.vertical-language-server-controls .select-control {
+  font-size: 0.7em; /* Slightly larger font for readability in vertical menu */
+  text-align: center; /* Center text in select */
+  padding-right: 25px; /* Adjust padding for dropdown arrow */
+}
+
+.vertical-language-server-controls
+  .select-wrapper
+  .material-icons:not(.dropdown-arrow) {
+  margin-right: 2px; /* Reduce margin for compactness */
+}
+
+.vertical-language-server-controls .dropdown-arrow {
+  right: 5px; /* Adjust arrow position */
+}
+
+.vertical-timeline-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%; /* Take full width */
+  margin-bottom: 10px; /* Space below timeline */
+}
+
+.vertical-timeline-container .time-display {
+  font-size: 0.9em;
+  color: white;
+}
+
+.vertical-timeline-container #timeline-vertical {
+  flex-grow: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(
+    to right,
+    var(--theme-color) var(--progress-value, 0%),
+    rgba(255, 255, 255, 0.3) var(--progress-value, 0%)
+  );
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+  transition: height 0.2s ease;
+}
+
+.vertical-timeline-container #timeline-vertical:hover {
+  height: 8px;
+}
+
+.vertical-timeline-container #timeline-vertical::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vertical-timeline-container #timeline-vertical::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+}
+
+.vertical-timeline-container #timeline-vertical::-ms-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--theme-color);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(255, 136, 0, 0.3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+}
+
+.vertical-timeline-container #timeline-vertical::-webkit-slider-runnable-track {
+  background: transparent; /* Hide default track */
+}
+.vertical-timeline-container #timeline-vertical::-moz-range-track {
+  background: transparent; /* Hide default track */
+}
+.vertical-timeline-container #timeline-vertical::-ms-track {
+  background: transparent; /* Hide default track */
+  border-color: transparent; /* Remove border */
+  color: transparent; /* Remove default fill */
+}
+
+.vertical-navigation-controls {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  padding: 5px 0;
+}
+
+.vertical-navigation-controls .control-group {
+  display: flex;
+  flex-direction: column; /* Vertical layout for icon and text */
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-shrink: 0;
+  color: white;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 5px 0px; /* Adjusted padding for vertical layout */
+  transition: transform 0.2s ease;
+  min-width: 70px; /* Adjusted min-width for vertical buttons */
+}
+
+.vertical-navigation-controls .control-group .material-icons {
+  font-size: 24px;
+  margin-bottom: 0;
+}
+
+.vertical-navigation-controls .control-group span {
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.vertical-navigation-controls .control-group:hover {
+  transform: translateY(-3px);
+}
