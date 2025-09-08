@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Reproductor de Video</title>
+
+    <!-- Iconos de Google y Tipografía -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Preload Google Fonts for faster loading -->
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+      as="style"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome for close icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      integrity="sha512-Fo3rlrZj/k7ujTnHg4CGR2D7kSs0v4LLanw2qksYuRlEzO+tcaEPQogQ0KaoGN26/zrn20ImR1DfuLWnOo7aBA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script defer>
+      window.contentConfig = {
+        type: "tv", // 'tv' para series, 'movie' para películas
+        title: "Título de la Serie/Película", // Título principal del contenido
+        chapterName: "Nombre del Capítulo", // Nombre del capítulo (para series)
+        seriesName: "Nombre de la Serie", // Nombre de la serie (para reportes)
+        posterUrl:
+          "https://image.tmdb.org/t/p/original/j2oX7UeZJJD6tUczrVECcJCdLaG.jpg", // URL del póster para mostrar en el reproductor
+        reportPosterUrl:
+          "https://image.tmdb.org/t/p/original/31hNuaJXTLdqCJnC2VQatWROSrg.jpg", // URL del póster para enviar en el reporte (puede ser la misma o diferente)
+        synopsis: "Sinopsis del contenido.", // Sinopsis del contenido
+        season: "1", // Solo para series
+        episode: "1", // Solo para series
+        nextChapterUrl: "https://example.com/next-chapter", // URL del siguiente capítulo
+        prevChapterUrl: "https://example.com/previous-chapter", // URL del capítulo anterior
+        showPrevChapterButton: true, // Controla la visibilidad del botón de capítulo anterior
+        introStartTime: "01:59", // Tiempo en segundos cuando aparece el botón de omitir intro
+        introEndTime: "02:20", // Tiempo cuando finaliza el intro y desaparece el botón (ej: "02:00" para 2 minutos, "01:30" para 1 minuto y 30 segundos)
+        goBackId: "165405", // ID para el botón de volver, se obtiene de la URL
+      };
+
+      // Función para obtener parámetros de la URL
+      function getUrlParameter(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)");
+        var results = regex.exec(location.search);
+        return results === null
+          ? ""
+          : decodeURIComponent(results[1].replace(/\+/g, " "));
+      }
+
+      // Obtener el 'id' de la URL y asignarlo a goBackId
+      const goBackIdFromUrl = getUrlParameter("id");
+      if (goBackIdFromUrl) {
+        window.contentConfig.goBackId = goBackIdFromUrl;
+      }
+
+      // --- 2. BASE DE DATOS LOCAL DE SERVIDORES POR IDIOMA ---
+      // Las URLs ahora se usan directamente sin codificación Base64.
+      window.languageServers = {
+        jp: [
+          {
+            name: "Server MP4 (ES)",
+            url: "https://ia800902.us.archive.org/23/items/2067-1-dub/2067_1_DUB.mp4",
+            mp4: true,
+          },
+          {
+            name: "Server Iframe (ES)",
+            url: "https://dropload.tv/e/ojl0u4u50zdl",
+            mp4: false,
+          },
+        ],
+        en: [
+          {
+            name: "Main Server (EN)",
+            url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+            mp4: true,
+          },
+          {
+            name: "Backup Server (EN)",
+            url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            mp4: true,
+          },
+        ],
+        es: [
+          {
+            name: "Servidor de Prueba (ES)",
+            url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+            mp4: true,
+          },
+        ],
+        // Puedes añadir más idiomas y sus servidores aquí
+      };
+
+      // --- 3. BASE DE DATOS LOCAL DE SERVIDORES DE DESCARGA ---
+      window.downloadServers = {
+        es: [
+          {
+            name: "Descarga Directa (MP4)",
+            url: "https://dn720402.ca.archive.org/0/items/kaisen-1-12-latino/01.mp4",
+            type: "mp4",
+          },
+          {
+            name: "Descarga Externa (MEGA)",
+            url: "https://mega.nz/file/example",
+            type: "external",
+          },
+        ],
+        en: [
+          {
+            name: "Direct Download (MP4)",
+            url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+            type: "mp4",
+          },
+          {
+            name: "External Download (Drive)",
+            url: "https://drive.google.com/file/example",
+            type: "external",
+          },
+        ],
+      };
+    </script>
+    <script type="module" src="dom_builder.js" defer></script>
+    <script type="module" src="external_handler.js" defer></script>
+    <script type="module" src="continueWatchingModal.js" defer></script>
+    <script type="module" src="anime_loader.js" defer></script>
+    <script type="module" src="script.js" defer></script>
+  </head>
+  <body>
+    <div id="video-player-container" class="video-player-container">
+      <!-- El reproductor de video se insertará aquí dinámicamente -->
+    </div>
+
+    <!-- Nuevo contenedor para el menú vertical -->
+    <div id="vertical-menu-container" class="vertical-menu-container">
+      <!-- Los elementos del menú vertical se insertarán aquí dinámicamente por dom_builder.js -->
+    </div>
+
+    <!-- Contenedor para los botones del menú lateral en orientación vertical -->
+    <div id="side-menu-buttons">
+      <!-- Los botones se insertarán aquí dinámicamente por dom_builder.js -->
+    </div>
+
+    <!-- Report Confirmation Modal -->
+    <div id="report-confirmation-modal" class="popup hidden">
+      <div class="popup-header">
+        <h3>Reporte Enviado</h3>
+        <button class="close-popup-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="popup-content report-confirmation-content">
+        <img
+          src="https://i.pinimg.com/originals/f2/1f/0a/f21f0a529006c607222141022020812f.gif"
+          alt="Reporte Enviado"
+          class="report-confirmation-gif"
+        />
+        <p>¡Gracias por tu reporte! Lo revisaremos pronto.</p>
+        <button id="report-confirmation-ok-btn" class="btn-primary">
+          Aceptar
+        </button>
+      </div>
+    </div>
+  </body>
+</html>
